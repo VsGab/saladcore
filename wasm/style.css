@@ -1,0 +1,102 @@
+body {
+    background-color: #112e38;
+    color: #9faeae;
+    font-family: monospace;
+    font-size: 3vmin;
+}
+
+pre {
+    white-space: pre-wrap;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.col {
+    margin: 0.5em;
+}
+
+button {
+    width: 100%;
+    height: 1.5em;
+    border: 0.5vmin solid #46565a;
+    background-color: #112e38;
+    color: #cad8d9;
+    margin-bottom: 0.5em;
+    font-family: monospace;
+    font-size: 2.5vmin;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #9faeae;
+}
+
+.tinybtn {
+    width: auto;
+    display: inline-block;
+    padding: 0px;
+}
+
+#term-box {
+    width:34ch;
+    height:60vmin;
+    padding: 0.5vmin;
+    white-space: pre-wrap;
+    overflow-y: scroll;
+    background-color: #254a57;
+    color: #9faeae;
+    scrollbar-color: #9faeae #61777c;
+}
+
+#state-box {
+    width: 8ch;
+    text-align: center;
+}
+
+#state {
+    min-height: 2.5em;
+    border: 0.5vmin solid #46565a;
+    font-size: 2vmin;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    flex-direction: column;
+    margin-bottom: 0.5em;
+}
+
+.state-ok {
+    color: #9faeae;
+}
+
+.state-error {
+    color: #fa5750;
+}
+
+#stack {
+    border-collapse: collapse;
+    color: #859900;
+    width: 100%;
+}
+
+#stack > tr {
+    border: 0.25vmin solid #46565a;
+}
+
+#display {
+    width: 60vmin;
+    height: 60vmin;
+    image-rendering: pixelated;
+    border-style: solid;
+    border-width: 0.5vmin;
+    border-color: #46565a;
+}
+
+#guide {
+    min-width: 35vmin;
+    list-style:none;
+}
+

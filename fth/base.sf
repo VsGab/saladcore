@@ -1,0 +1,606 @@
+c: over [ 188 ] ;
+c: swap [ 189 ] ;
+c: nip  [ 190 ] ;
+
+c: drop [ 192 ] ;
+c:    + [ 193 ] ;
+c:    - [ 194 ] ;
+c: and  [ 195 ] ;
+c:  or  [ 196 ] ;
+c: shr  [ 197 ] ;
+c: shl  [ 198 ] ;
+c: mul  [ 202 ] ;
+c: div  [ 203 ] ;
+
+c: dup [ 208 ] ;
+c: ,   [ 209 ] ;
+c: [,] [ 1 81 , ins ] ;
+c: neg [ 210 ] ;
+c: 1+  [ 211 ] ;
+c: 1-  [ 212 ] ;
+c: nswap  [ 213 ] ;
+c: fne  [ 214 ] ;
+c: f!  [ 215 ] ;
+c: f-  [ 216 ] ;
+c: ret [ 217 ] ;
+c: [ret] [ 1 89 , ins ] ;
+c: call [ 218 ] ;
+c: [call] [ 1 90 , ins ] ;
+c: jmp  [ 219 ] ;
+c: [jmp]  [ 1 91 , ins ] ;
+c: loop [ 220 ] ;
+c: [loop] [ 1 92 , ins ] ;
+c: ljmp [ 221 ] ;
+c: int  [ 222 ] ;
+c: halt [ 223 ] ;
+
+c:   0? [ 224 ] ;
+c:  /0? [ 225 ] ;
+c:   =? [ 226 ] ;
+c:  /=? [ 227 ] ;
+c:  >=? [ 228 ] ;
+c:   <? [ 229 ] ;
+
+c:   lb [ 232 ] ;
+c:   lw [ 233 ] ;
+c: mcpb [ 234 ] ;
+c: mcpw [ 235 ] ;
+c:  snb [ 236 ] ;
+c:  snw [ 237 ] ;
+c:  stb [ 238 ] ;
+c:  stw [ 239 ] ;
+
+c: f>  [ 2 shl 1 0 + ins ] ;
+c: >f< [ 2 shl 1 1 + ins ] ;
+c: >f  [ 2 shl 1 2 + ins ] ;
+
+c: romsz [ 32 0 ] ;
+c: ine  [ 72 0 ] ;
+c: in*  [ 72 2 ] ;
+c: code [ 72 4 ] ;
+c: last [ 72 8 ] ;
+c: here [ 72 12 ] ;
+c: tib  [ 74 0 ] ;
+c: tibe [ 76 0 ] ;
+c: hwrd [ 88 0 ] ;
+
+c: noinl [ code lw 1- dup lb
+  64 or stb drop ] ; noinl
+
+c: _lit2 [ dup 7 shr ins 127 and ins ] ;
+c: _' [ word nip swap find nip ] ;
+c: [!] _' _lit2 _lit2 [ call ] [ [call] ] ; noinl
+c: lit2 _' _lit2 [!] ;
+c: '  _' _' [!] ; noinl
+c: ` ' ' [!] ' lit2 [!] [ [call] ]  ; noinl
+
+
+c: in>| [ ine lw in* lw 3 f! ]
+  1 f> [ >=? 11 jmp dup lb ]
+  0 f> [ =? drop 3 jmp ]
+  [ 1+ 12 loop
+    1+ in* snw 0 f- ] ;
+
+c: ( [ 41 , ` in>| ] ; noinl
+c: \ [ 10 , ` in>| ] ; noinl
+\ yay! we have comments!
+
+\ short recap in reverse:
+\  noinl sets no-inline flag of last word
+\  in>| ( char -- ) skips to tib char
+\  ine is tib end, in* is tib pointer
+\  [!] ( xt -- ) inserts a lit-lit-call
+\  ' ( -- xt) finds next token word
+\  lit2 inserts a double lit - 14bit addr
+\ variables:
+\  ine - pointer to next-to-last char in buffer
+\  in* - pointer to next unparsed char
+\  code - pointer to the code start of current word
+\  last - pointer to byte after last word footer
+\  here - pointer to next free byte in dict
+\ 3 f-words ( x -- ) insert frame asm ops
+\   they are not normally inlined
+\ the rest contain just an opcode(+ret) to be inlined*
+\  *except [] words which insert code on execution
+\ variables:
+\  tib pointer, tib end
+\  here, last word end
+\  inline flag
+\ main loop calls compile until end of tib reached
+\ compile calls token scan, and:
+\  if all digits calls numreader, which puts it on stack
+\    if inlining, call ins on it, else returns
+\  else calls findword, which returns word code range
+\    if inline flag is set
+\      word without trailing ret is memcpy'd to cg buff
+\    else word is called
+\ words have a non-inline (NI) flag
+\   this causes them to be called even if flag is set
+\ the builtin words are:
+\  c: (NI) parses name, writes word header at here
+\  <semicol> (NI) copies code at here, adds ret and size
+\  ins writes a single byte at here
+\  [ (NI) sets inline flag
+\  ] (NI) unsets inline flag
+\  word reads next token, ( -- tok-start flags tok-end)
+\  find  ( tok-end tok-start -- code-end code-start)
+\  wcode ( wend -- code-end code-start )
+\  cmps ( name-start tok-end tok-start  -- is_same)
+\  eval  runs main loop on tib - from interrupts
+\  exe executes xt in tos at compile time
+
+\ after comments next feature to implement is jump labels
+\ relative jump offsets are a pain to write manually
+
+\ labels vector - word start offsets
+c: lblv  [ 72 60 ] ;
+\ vec of jumps in def - count, vec, end
+\ 2B pairs of jump-offset, label-index
+c: jmpc [ 72 18 ] ;
+c: jmpv [ 72 20 ] ;
+c: jmpe [ 72 60 ] ;
+\ code generation (here) 1-based offset
+c: cg+ [ here lw code lw - 1+ ] ;
+
+
+\ sets current cg offset to labels[idx]
+c: # ( idx -- )
+  [ lblv + ` cg+ stb drop ] ;
+
+\ inserts 0 jmp to be filled by ]#
+c: #jmp ( idx -- ) [
+  jmpc lb jmpv +
+  ` cg+ stb 1+ swap stb
+  1+ jmpv - jmpc snb drop
+  0 , ins [jmp] ] ;
+
+\ iterates jumps and sets their lit
+\ based on label offsets
+c: ]# ( -- ) [
+  jmpc lb jmpv + jmpv  \ jmpv-end jmpv
+  \ loop start
+  over >=? 37 jmp     \ if end reached
+  dup lb over 1+ lb
+  \ jmpve jmpv jmp-lit-off lbl#
+  lblv + lb           \ lbl# -> lbl-off
+  dup /0? 2 jmp
+    0 int
+  \ lit-val = lbl-off - lit-off - 2
+  over - 2 -
+  0 >=? 2 jmp   \ check offset positive
+    0 int
+  \ set lit at [code + lit-1off - 1]
+  swap code lw + 1- snb
+  drop 2 + 39 loop \ move to next and loop
+  drop drop ] ; \ cleanup jmpve x2
+
+\ inserts loop with label-based lit
+c: #loop [
+  lblv + lb
+  dup /0? 2 jmp
+    0 int
+  ` cg+ swap -
+  ins [loop] ] ;
+
+\ memset
+c: fill ( val end crnt -- )
+  [ 3 f! ]
+  1 f> [ >=? 5 jmp ]
+  0 f> [ stb 1+ 7 loop ]
+  [ 0 f- ] ;
+
+\ clears jumps state
+c: #[ [ 0 , jmpe , jmpc , ` fill ] ;
+
+\ helpers
+c: drop2 [ drop drop ] ;
+c: dup2 [ over over ] ;
+
+
+\ \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+\ by now looking up words has gotten quite slow
+\ an indexing method is needed
+\ the next words implement a 256-entry
+\   open addressing hash table for words
+\ each row is hash:1B codesz:1B xt:2B
+
+\ string hash to 1B
+c: shs ( end start -- hash) #[
+  [ 2 f! swap 97 ] 0 >f<   \ res end crnt
+  0 #
+    [ over >=? ] 1 #jmp
+    0 f> [ 1 shl over lb 17 - + ] 0 >f
+    [ 1+ ]
+  0 #loop
+  1 # [ drop2 1 127 and ]
+]# ;
+
+\ word hash table base
+c: whtb [ 64 0 ] ;
+
+\ inserts hash table entry
+c: whput ( xt codesz hash --  ) #[
+  [ 3 f! dup 2 shl  ] \ xt codesz hash row
+  0 #
+  [ dup whtb + dup lb /0? ] 1 #jmp
+  \ xt codesz hash row row-addr
+  2 f> [ stb 1+ ]  \ hash first
+  1 f> [ stb 1+ ]  \ then code size
+  0 f> [ stw drop 0 f- ret ] \ then xt
+  1 #
+  [ drop 4 + 7 127 and ] 0 #loop
+]# ;
+
+\ gets word name range from xt
+c: wname ( xt -- name-end name-start )
+  [ 2 - dup dup lb - ] ;
+
+\ hash table lookup based on string and hash
+c: whget #[
+  ( tok-addr tok-len hash -- code-len xt)
+  [ 3 f! dup 2 shl ]
+  0 #
+  \ tok len hash row
+  [ dup whtb + dup lb \ ... rddr rhash
+    dup /0? ] 4 #jmp
+      \ row hash 0 - not found, ret 0's
+    [ 0 , 0 , 2 f- ret ]
+    4 #
+    2 f> [ /=? drop ] 1 #jmp
+    \ hash matches
+    \ tok len hash row raddr
+    [ dup 2 + lw  ]
+    \ tok len  hash row raddr xt
+    \ pick token before name for strcmp
+    0 f> [ over ` wname
+    \ tok len  hash row raddr xt tok wnend wnst
+    \ compare name len
+      dup2 - ] 1 f> [ /=? drop ] 2 #jmp
+    \ tok len hash row raddr xt tok wnend wnst
+    \ strcmp
+    [ ` cmps 0? ] 3 #jmp
+    \ tok len hash row raddr xt
+    [ swap 1+ lb swap
+    \ tok len hash row codelen xt
+      2 f- ret ]
+
+  2 # \ cleanup tok wnend wnst
+  [ drop2 drop ]
+  3 # \ cleanup xt
+  [ drop ]
+  1 # \ end st hash row rowaddr
+  [ drop 4 + 7 127 and ] 0 #loop
+]# ;
+
+\ words base - must match!!
+c: wbase+1 [ 4 89 ] ;  \ 601
+
+\ iterates words and calls cb on each
+c: witer ( word-callback-xt -- )
+  \ cb is ( crnt-xt crnt-code-len -- )
+  #[ [ 1 f! last lw ]
+  0 #  \ cb crnt-xt
+    [ wcode swap over - over swap ]
+    \ cb xt xt len
+    0 f> [call]
+    \ cb xt
+    [ 2 - dup lb - ] \ cb prev-end
+    [ wbase+1 >=? ]  0 #loop
+  [ drop2 ]
+]# ;
+
+\ word indexing cb for witer
+c: widxcb ( xt len -- ) [
+  over ` wname ` shs ` whput
+] ;
+
+\ string hash wrapper
+c: shget ( str-end str-start -- )
+  [ 2 f! dup2 ` shs swap ] \ end hash start
+  0 >f<           \ start hash end
+  0 f> [ - swap ]  \ start len hash
+;
+
+\ index all words in hash table
+c: idxall ' widxcb lit2 [,] ` witer ;
+
+\ word find replacement using hash table
+c: whfind #[
+  ( tok-end tok-st -- code-end code-st)
+  [ 2 f! dup2 ` shget ` whget \ code-len xt
+    dup /0? ] 0 #jmp
+    \ call plain find
+    [ drop2 ` ifind 2 f- ret ]
+  0 #
+  [ swap over + swap 2 f- ]
+]# ;
+
+\ set word-size ivt entries
+c: isr ( xt idx -- )
+  [ 2 shl ]
+  romsz lit2
+  [ + snw drop ] ;
+
+\ enable word hash table find
+c: enwht
+  ' whfind lit2 [ , 127 , ` isr ] ;
+
+\ add last defined word to hash table
+c: >h [
+  code lw last lw ` wcode -
+  \ xt codesz
+  ` widxcb
+] ;
+
+\ index all up to here
+idxall
+
+\ enable find with hash table
+enwht
+
+\ \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+\ next some basic string words
+\ strings are (limit start) pairs at compile time
+\ their storage is prefixed by a jump
+
+\ emit char to serial1
+c: putc [ 35 snb drop ] ;
+c: cr [ 10 , 35 snb drop ] ;
+
+\ outputs string using putc
+c: puts ( end start -- )
+#[
+  0 #
+    [ over >=? ] 1 #jmp
+    [ dup lb putc 1+ ]
+  0 #loop
+  1 # [ drop2 ]
+]# ;
+
+\ compile time string printer
+c: .( [ in* lw 41 , ` in>|
+  1+ in* lw 1- swap ` puts ] ;
+
+\ stores max 128 chars in word code
+\ prepends them with lit+jmp to skip data
+\ returns str limits at compile-time
+c: " ( -- str-end str-beg )
+  [ 0 f! \ dont let in>| init frame
+    here lw          \ here in caller
+    0 , ins [jmp]    \ ins lit+jmp
+    in* lw           \ tib before str
+    34 , ` in>|   \ skip to "
+  \ initial-here initial-tib
+    in* lw 1- swap 1+ ]  \ tib after str
+  \ ins string chars
+  #[ 0 #
+    [ over >=? ] 1 #jmp
+    [ dup lb ins 1+ ]
+    0 #loop
+    1 # [ drop drop ]
+  ]# \ only intial-here left
+  [ here lw over - 2 -
+  \ str-start str-len
+    stb 2 + here lw swap ] ; noinl
+
+\ inserts string limits for return
+\ helper for string inlining
+c: str ( str-end str-beg -- )
+  [ swap lit2 [,] lit2 [,] ] ;
+
+\ like lit2 but returns them instead
+c: lits ( word -- hbyte lbyte )
+  [ dup 7 shr swap 127 and ] ;
+
+c: min ( a b -- min ) #[
+  [ over <? ] 0 #jmp
+  [ swap ]
+  0 # \ b<a
+  [ nip ] ]# ;
+
+c: max ( a b -- max ) #[
+  [ over >=? ] 0 #jmp
+  [ swap ]
+  0 # \ b>=a
+  [ nip ] ]# ;
+
+\ serial0 read isr
+\ serial0:
+\ 32 spd mode read write
+\ 36 rsz wsz  rst  wst
+c: sr0rd #[
+  0 #
+  [ 36 lb 0? ] 1 #jmp \ read #pending
+  [ 34 lb 35 snb      \ echo
+    dup ine lw swap ]   \ char tib-end char
+  [ 8 /=? ] 2 #jmp   \ if not bsp cont
+    [ drop 1- tib , ` max  \ clip to begin
+    ine snw drop drop ]
+    0 #loop
+  2 #
+  [ stb 1+ tibe , ` min
+    ine snw drop \ write to tib
+    10 /=? drop ] 0 #loop \ not newline
+  \ on newline eval line - halts
+  [ eval 35 , 32 stb
+   111 stb 107 stb 10 stb drop ]
+  1 #
+  [ halt ]
+]# ;
+
+\ prints number to serial0
+c: . ( num -- ) [ 1 f! ] #[
+  0 # \ digit extraction loop
+  [ dup 10 div dup 10 mul
+    \ num num/10 10*(num/10)
+    nswap - swap  \ num%10 num
+    10 >=? ] 0 #loop
+  [ dup /0? 1 jmp drop ]
+  1 # \ digit print loop
+    [ 48 + 35 snb drop fne ] 1 #loop
+]# ;
+
+
+\ \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+\ next section contains basic drawing words
+\ a 128x128 1-bit framebuffer is used
+
+
+\ scratchpad for user logic - 1K
+c: pad [ 40 0 ] ;
+
+\ framebuffer address
+\ fb is column major
+c: fb [ 48 0 ] ;
+\ display height
+c: dh [ 1 0 ] ;
+\ display height in 4x2 blocks
+c: dhb [ 64 ] ;
+\ display width in 4x2 blocks
+c: dwb [ 32 ] ;
+
+\ display clear - 2K
+c: dclr [ 0 , fb dup 16 0 + swap ` fill ] ;
+
+\ block address
+c: dbla ( y x --  )
+  [ dhb mul + fb + ] ;
+
+\ based on "tom thumb" font
+\ each char is 3 blocks, top to bottom
+c: font [
+\ first is 32
+  0 0 0
+  17 1 1
+  85 0 0
+  117 117 5
+  54 54 2
+  65 18 4
+  51 87 6
+  17 0 0
+  18 17 2
+  33 34 1
+  37 5 0
+  114 2 0
+  18 0 0
+  7 0 0
+  1 0 0
+  68 18 1
+  86 85 3
+  50 34 2
+  67 18 7
+  67 66 3
+  85 71 4
+  23 67 3
+  22 87 7
+  71 18 1
+  87 87 7
+  87 71 3
+  1 1 0
+  2 18 0
+  36 33 4
+  7 7 0
+  33 36 1
+  71 2 2
+  82 23 6
+  82 87 5
+  83 83 3
+  22 17 6
+  83 85 3
+  23 23 7
+  23 23 1
+  22 87 6
+  85 87 5
+  39 34 7
+  68 84 2
+  85 83 5
+  17 17 7
+  117 87 5
+  117 119 5
+  82 85 2
+  83 19 1
+  82 117 6
+  83 55 5
+  22 66 3
+  39 34 2
+  85 85 6
+  85 37 2
+  85 119 5
+  85 82 5
+  85 34 2
+  71 18 7
+  23 17 7
+  33 4 0
+  71 68 7
+  82 0 0
+  7 0 0
+  33 0 0
+  99 117 0
+  49 85 3
+  22 97 0
+  100 85 6
+  86 99 0
+  36 39 2
+  86 71 2
+  49 85 5
+  1 17 1
+  4 68 37
+  81 51 5
+  35 34 7
+  119 87 0
+  83 85 0
+  82 37 0
+  83 53 1
+  86 101 4
+  22 17 0
+  54 54 0
+  114 34 6
+  85 101 0
+  85 39 0
+  117 119 0
+  37 82 0
+  85 70 2
+  103 115 0
+  38 33 6
+  17 16 1
+  35 36 3
+  54 0 0
+\ last is is 126
+] ;
+
+\ draw font char at blk coords
+c: dch ( ascii y x -- )
+  [ 3 f! dbla swap 32 - 3 mul ] \ fb-addr ascii
+  ' font lit2
+  [ + ] \  fb-addr font-char-addr
+  \ 3 blocks, top to bottom
+  [ dup lb ] 0 f> [ swap stb 1+ ] 0 >f
+  [ 1+ dup lb ] 0 f> [ swap stb 1+ ] 0 >f
+  [ 1+ dup lb ] 0 f> [ swap stb 0 f- ]
+;
+
+\ \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+\ boot word, reset code ljump's to it
+\ should be the last word in ROM
+c: ^^ [ 0 f!
+  \ init tib pointers
+  tib , in* snw ine snw drop
+  \ last was set by reset code
+  \ set code to skip word code
+  last lw 3 + code snw
+  \ skip word len is:
+  \   hwrd - (last + 3)
+  hwrd swap - ` lits
+  \ write skip word len at hwrd
+  hwrd swap stb 1+ swap stb 1+
+  \ set here and last to hwrd+2
+  here snw last snw drop ]
+  \ setup interrupts
+  ' sr0rd lit2 [ , 0 , ` isr ]
+  ' halt lit2  [ , 1 , ` isr ]
+  ' halt lit2  [ , 2 , ` isr ]
+  \ index all words
+  ` idxall
+  \ print banner
+  " saladforth " str ` puts
+  [ ` cr halt ] ;

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Saladcore demo</title>
+    <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <pre style="padding: 0.2em;">
+    saladcore is a work-in-progress hybrid stack machine
+    saladforth is a forth-like language for it
+    this demo uses a wasm-compiled core simulator and a prebuilt rom </pre>
+    </h4>
+    <div class="row">
+        <div id="term-box" class="col"></div>
+        <div id="state-box" class="col">
+            <div id="state"></div>
+            <button onclick="clear_term(this)"
+               title="Clear term" >clear</button>
+            <button onclick="reset_core(this)"
+               title="Reset core" >reset</button>
+            <table id="stack"></table>
+            <div id="stack_more" hidden>...</div>
+        </div>
+        <canvas id="display" class="col"></canvas>
+        <div id="guide" class="col"></div>
+    </div>
+    <div style="position: fixed; bottom: 1em; right:1em; font-size: 2vmin;">
+        saladcore v0.1 (wasm)
+    </div>
+    <script src="main.js"></script>
+</body>
+
+<script>
+    async function init(rom) {
+        let wasm_imports={js_io_write,js_io_read,js_error}
+        // init wasm module
+        const { instance } = await WebAssembly.instantiateStreaming(
+            fetch("salad.wasm"), {env:wasm_imports}
+        );
+        wasm_core = instance.exports
+
+        // load rom into memory
+        load_rom(rom)
+        // also runs reset code
+        wasm_core.saladcore_js_init()
+
+        document.onkeydown = function(e) {
+            const ascii = handled_keys[event.key]
+            if (ascii) {
+                //console.log(event.key)
+                if (ascii == 8) // bksp
+                    serial_send_to_dev(ascii)
+                else
+                    keypad_press(ascii)
+            }
+        }
+        document.onkeypress = function (e) {
+            e = e || window.event;
+            //console.log(e.keyCode)
+            var key = e.keyCode
+            var ascii = key == 13 ? 10 : key // map cr to lf
+            serial_send_to_dev(ascii)
+        }
+
+        // setup periodic redraw
+        setInterval(function() {
+            update_canvas()
+            wasm_core.saladcore_js_int(2)
+            exec_wrap()
+        }, frame_time_ms)
+    }
+    fetch_rom(rom => init(rom))
+    fetch_guide()
+    set_error(null)
+  </script>
+
+</html>
