@@ -9,6 +9,10 @@ pre {
     white-space: pre-wrap;
 }
 
+a {
+    color: #3fc5b7;
+}
+
 .row {
     display: flex;
     flex-wrap: wrap;
@@ -39,6 +43,7 @@ button:hover {
     width: auto;
     display: inline-block;
     padding: 0px;
+    margin-right: 1em;
 }
 
 #term-box {

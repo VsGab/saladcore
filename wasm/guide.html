@@ -1,57 +1,65 @@
+<div>
+    check out <a href="https://github.com/VsGab/saladcore/tree/main/fth#examples"
+                 target="_blank">examples</a>
+</div>
+
 samples:
 <ul>
-    <li>
-        <span>arithmetic</span>
-        <ins hidden>10 4 mul 2 +</ins>
-    </li>
-    <li>
-        <span>stack ops</span>
-        <ins hidden>8 9 over dup</ins>
-    </li>
-    <li>
-        <span>define word 1</span>
-        <ins hidden>c: foo 42 ;</ins>
-    </li>
-    <li>
-        <span>define word 2</span>
-        <ins hidden>c: res-inl [ 1 0 , 42 ] ;
-                    res-inl</ins>
-    </li>
-    <li>
-        <span>define word 3</span>
-        <ins hidden>c: add5 [ , 5 + ] ;
-                    20 add5</ins>
-    </li>
-    <li>
-        <span>frame ops</span>
-        <ins hidden>c: 4th-add [ 4 f! ] 0 f&gt; [ 10 + ] 0 &gt;f ;
-                    9 8 7 6 4th-add</ins>
-    </li>
-    <li>
-        <span>loops</span>
-        <ins hidden>c: 1to5 [ 1 ] 0 # [ dup 1+ 5 &lt;? ] 0 #loop ;
-                    1to5</ins>
-    </li>
-    <li>
-        <span>hello world</span>
-        <ins hidden>c: hi " hello world" str ;
-                    hi puts</ins>
-    </li>
     <li>
         <span>draw block</span>
         <ins hidden>32 16 dbla 124 stb drop</ins>
     </li>
     <li>
         <span>draw ascii</span>
-        <ins hidden>72 0 0 dch 73 0 1 dch 33 0 2 dch</ins>
+        <ins hidden>72 0 0 dch \ H
+                    73 0 1 dch \ I
+                    33 0 2 dch \ !</ins>
+    </li>
+    <li>
+        <span>arrow key code</span>
+        <ins hidden>
+            \ ISR must end with halt
+            c: key [ 40 lb halt ] ;
+            ' key 1 isr
+        </ins>
     </li>
     <li>
         <span>timer redraw</span>
-        <ins hidden>c: plx [ pad ] ;
-                    c: ply pad 1+ lit2 ;
-                    c: upd [ ` dclr ply lb plx lb dbla 102 stb drop
-                            ply dup lb 1+ 63 and stb drop halt ] ;
-                    ' upd 2 , isr</ins>
+        <ins hidden>
+            c: plx [ pad ] ;     \ player X
+            c: ply pad 1+ lit2 ; \ player Y
+            c: spd pad 2 + lit2 ; \ speed
+            c: plx> [ plx lb ] ; \ load plx
+            c: ply> [ ply lb ] ; \ load ply
+            c: >plx [ , 0 , ` max
+                     31 , ` min  \ clip plx
+                     plx snb drop ] ; \ update plx
+            c: upd [ ` dclr             \ clear display
+                    ply> plx> dbla      \ get block address
+                    102 stb drop        \ write a 2x2 square to it
+                    ply dup lb spd lb + \ add spd to Y
+                    63 and stb          \ Y = Y MOD 63
+                    drop halt ] ;
+            1 , spd snb drop
+            ' upd 2 isr               \ set timer ISR
+        </ins>
+    </li>
+    <li>
+        <span>speed increase</span>
+        <ins hidden>spd dup lb 1+ 10 min swap snb . </ins>
+    </li>
+    <li>
+        <span>arrows move</span>
+        <ins hidden>
+            c: lft [ ` plx> 1- ` >plx  ] ;
+            c: rgt [ ` plx> 1+ ` >plx  ] ;
+            c: key #[ [ 40 lb 18 /=? ] 1 #jmp
+                ` lft  0 #jmp
+                    1 # [ 9 /=? ] 0 #jmp
+                ` rgt
+                0 # [ drop halt ] ]# ;
+            ' key , 1 isr
+        </ins>
     </li>
 
 </ul>

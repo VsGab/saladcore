@@ -7,8 +7,8 @@
 </head>
 <body>
     <pre style="padding: 0.2em;">
-    saladcore is a work-in-progress hybrid stack machine
-    saladforth is a forth-like language for it
+    <a href="https://github.com/VsGab/saladcore/blob/main/csim/README.md">saladcore</a> is a work-in-progress hybrid stack machine
+                <a href="https://github.com/VsGab/saladcore/blob/main/fth/README.md">saladforth</a> is a forth-like language for it
     this demo uses a wasm-compiled core simulator and a prebuilt rom </pre>
     </h4>
     <div class="row">
@@ -49,18 +49,28 @@
             const ascii = handled_keys[event.key]
             if (ascii) {
                 //console.log(event.key)
-                if (ascii == 8) // bksp
+                if (ascii == 8) {
+                    // backspace
                     serial_send_to_dev(ascii)
-                else
+                } else if (!key_is_repeated(ascii)) {
                     keypad_press(ascii)
+                    key_repeat_on(ascii)
+                }
             }
         }
+
+        document.onkeyup = function(e) {
+            const ascii = handled_keys[event.key]
+            if (ascii) key_repeat_off(ascii)
+        }
+
         document.onkeypress = function (e) {
             e = e || window.event;
             //console.log(e.keyCode)
             var key = e.keyCode
             var ascii = key == 13 ? 10 : key // map cr to lf
             serial_send_to_dev(ascii)
+            e.preventDefault()
         }
 
         // setup periodic redraw

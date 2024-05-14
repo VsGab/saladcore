@@ -392,17 +392,11 @@ c: str ( str-end str-beg -- )
 c: lits ( word -- hbyte lbyte )
   [ dup 7 shr swap 127 and ] ;
 
-c: min ( a b -- min ) #[
-  [ over <? ] 0 #jmp
-  [ swap ]
-  0 # \ b<a
-  [ nip ] ]# ;
+c: min ( a b -- min )
+  [ over <? 1 jmp swap nip ] ;
 
-c: max ( a b -- max ) #[
-  [ over >=? ] 0 #jmp
-  [ swap ]
-  0 # \ b>=a
-  [ nip ] ]# ;
+c: max ( a b -- max )
+  [ over >=? 1 jmp swap nip ] ;
 
 \ serial0 read isr
 \ serial0:
@@ -578,6 +572,9 @@ c: dch ( ascii y x -- )
   [ 1+ dup lb ] 0 f> [ swap stb 1+ ] 0 >f
   [ 1+ dup lb ] 0 f> [ swap stb 0 f- ]
 ;
+
+\ reads random byte from sys device
+c: rand ( -- val ) [ 41 lb ] ;
 
 \ \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 \ boot word, reset code ljump's to it

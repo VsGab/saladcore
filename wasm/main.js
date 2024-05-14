@@ -1,5 +1,6 @@
 const display_size = 128  // must match wasm_main.c
-const frame_time_ms = 100
+const frame_time_ms = 50
+const key_repeat_ms = 50
 
 var term_box = null
 var display = null
@@ -73,6 +74,7 @@ var serial_buff = []
 var term_buff = []
 var core_stack = []
 var last_keypress = 0
+var keys_repeat_timers = {}
 
 function js_io_write(addr, val) {
     // console.log(val)
@@ -97,6 +99,9 @@ function js_io_read(addr) {
         const key = last_keypress
         last_keypress = 0
         return key
+    }
+    if (addr == 41) {
+        return Math.floor(Math.random() * 255);
     }
 }
 
@@ -150,15 +155,29 @@ function fetch_rom(cb) {
     .catch(err => console.error(err));
 }
 
+function open_tab(sample) {
+    const blob = new Blob([sample], { type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+}
+
 function patch_sample(el) {
-    const play = document.createElement('button')
     const code = el.textContent.replace(/  +/g, ' ')
+    const play = document.createElement('button')
     play.textContent = '\u25B6'
     play.classList = 'tinybtn'
     play.onclick = function() {
         this.blur()
         term_send(code)
     }
+    const open = document.createElement('button')
+    open.textContent = 'view'
+    open.classList = 'tinybtn'
+    open.onclick = function() {
+        this.blur()
+        open_tab(el.textContent)
+    }
+    el.parentElement.appendChild(open)
     el.parentElement.appendChild(play)
 }
 
@@ -230,4 +249,21 @@ function reset_core(btn) {
         load_rom(loaded_rom)
         wasm_core.saladcore_js_init()
     })
+}
+
+function key_is_repeated(key) {
+    return !!(keys_repeat_timers[key])
+}
+
+function key_repeat_on(key) {
+    keys_repeat_timers[key] = setInterval(function(){
+        keypad_press(key)
+    }, key_repeat_ms)
+}
+
+function key_repeat_off(key) {
+    if (keys_repeat_timers[key]) {
+        clearInterval(keys_repeat_timers[key])
+        keys_repeat_timers[key] = null
+    }
 }
