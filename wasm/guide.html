@@ -2,7 +2,7 @@
     check out <a href="https://github.com/VsGab/saladcore/tree/main/fth#examples"
                  target="_blank">examples</a>
 </div>
-
+<hr>
 samples:
 <ul>
     <li>
@@ -19,7 +19,7 @@ samples:
         <span>arrow key code</span>
         <ins hidden>
             \ ISR must end with halt
-            c: key [ 40 lb halt ] ;
+            c: key [ 40 lb ` . cr halt ] ;
             ' key 1 isr
         </ins>
     </li>

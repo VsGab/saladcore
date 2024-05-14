@@ -15,12 +15,17 @@
         <div id="term-box" class="col"></div>
         <div id="state-box" class="col">
             <div id="state"></div>
+            <input type="file" onchange="load_file(this)"
+               title="Load source" />
+            <button onclick="unload_file(this)"
+               id="unload-btn"
+               title="Unload source" >unload</button>
             <button onclick="clear_term(this)"
                title="Clear term" >clear</button>
             <button onclick="reset_core(this)"
-               title="Reset core" >reset</button>
+               title="Reset core, rerun source" >reset</button>
             <table id="stack"></table>
-            <div id="stack_more" hidden>...</div>
+            <div id="stack_more" class="hidden">...</div>
         </div>
         <canvas id="display" class="col"></canvas>
         <div id="guide" class="col"></div>

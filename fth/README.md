@@ -128,6 +128,8 @@ hi puts
 ### Other words
 |Word|Interface|Description|
 |---|---|---|
+|**'**  | `( -- xt )`         | Scans word name and returns code address
+|**`**  | `( -- )`            | Scans word name and inserts **lit**-lit-call (mind the nop)
 |dch    | `( ascii y x -- )`  | Draws a character at block coords
 |dbla   | `( y x -- addr)`    | Returns memory address of pixel block
 |dclr   | `( -- )`            | Clear framebuffer with 0

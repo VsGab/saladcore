@@ -13,6 +13,31 @@ a {
     color: #3fc5b7;
 }
 
+input[type=file] {
+    width: 100%;
+    color: #112e38;
+    cursor: pointer;
+}
+
+input[type=file]::file-selector-button {
+    width: 100%;
+    height: 1.5em;
+    border: 0.5vmin solid #46565a;
+    background-color: #112e38;
+    color: #cad8d9;
+    margin-bottom: 0.5em;
+    font-family: monospace;
+    font-size: 2.5vmin;
+}
+
+.src-loaded {
+    border-color: #859900;
+}
+
+.hidden {
+    display: none;
+}
+
 .row {
     display: flex;
     flex-wrap: wrap;
