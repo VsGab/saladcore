@@ -83,7 +83,7 @@ void exec_una_nlr_op(byte op) {
     case DEC: rset(0, rget(0)-1); break;
     case INT: soft_irq(rget(0)); break;
     case SWAPP: swap(1,2); break;
-    case FNE: take_jmp = take_jmp && (fsz != 0); break;
+    case FSZ: ds_push(fsz); break;
     case FSET: set_frame_size(rget(0)); break;
     case FKEEP: frame_keep_shift(rget(0)); break;
     case RET: next_pc = rspop();

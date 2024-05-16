@@ -53,7 +53,7 @@ Frame accounting is implemented with register *FSZ* (frame size).
 |INC | 3  | Increments T
 |DEC | 4  | Decrements T
 |*NSWAP*|5| Swaps next-on-stack with 3'rd on stack
-|*FNE*| 6 | Sets TAKE_JUMP flag if frame not empty
+|FSZ | 6  | Pushes frame size
 |FSET| 7  | Sets frame size from T, consumming it
 |*FKEEP*| 8 | Keeps only topmost T in frame
 |RET | 9  | Return from function

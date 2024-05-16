@@ -19,7 +19,7 @@ c: neg [ 210 ] ;
 c: 1+  [ 211 ] ;
 c: 1-  [ 212 ] ;
 c: nswap  [ 213 ] ;
-c: fne  [ 214 ] ;
+c: fsz  [ 214 ] ;
 c: f!  [ 215 ] ;
 c: f-  [ 216 ] ;
 c: ret [ 217 ] ;
@@ -422,16 +422,22 @@ c: sr0rd #[
   [ halt ]
 ]# ;
 
-\ prints number to serial0
-c: . ( num -- ) [ 1 f! ] #[
+\ extracts number digits
+c: dgt ( num -- last-dgt ... first-dgt)
+#[
   0 # \ digit extraction loop
-  [ dup 10 div dup 10 mul
+    [ dup 10 div dup 10 mul
     \ num num/10 10*(num/10)
     nswap - swap  \ num%10 num
     10 >=? ] 0 #loop
   [ dup /0? 1 jmp drop ]
+]# ;
+
+\ prints number to serial0
+c: . ( num -- ) [ 1 f! ] #[
+  ` dgt
   1 # \ digit print loop
-    [ 48 + 35 snb drop fne ] 1 #loop
+    [ 48 + 35 snb drop fsz /0? ] 1 #loop
 ]# ;
 
 
@@ -457,7 +463,7 @@ c: dwb [ 32 ] ;
 c: dclr [ 0 , fb dup 16 0 + swap ` fill ] ;
 
 \ block address
-c: dbla ( y x --  )
+c: dbla ( y x -- blk-addr)
   [ dhb mul + fb + ] ;
 
 \ based on "tom thumb" font
@@ -572,6 +578,35 @@ c: dch ( ascii y x -- )
   [ 1+ dup lb ] 0 f> [ swap stb 1+ ] 0 >f
   [ 1+ dup lb ] 0 f> [ swap stb 0 f- ]
 ;
+
+\ draws number at blk coords
+\ returns updated coords
+c: dnum ( y x num -- y x') #[
+  [ 3 f! ` dgt ]
+  1 # \ digit display loop
+    [ 48 + ]  \ y x n-1-digits.. ascii
+    0 f> 1 f> \ y x n-1-digits.. ascii y x
+    [ ` dch ] \ y x n-1-digits..
+    1 f> [ 1+ dwb 1- ` min ] 1 >f
+    \ y min(x+1,width-1) n-1-digits..
+    [ fsz 3 >=? drop ] 1 #loop
+]# ;
+
+\ draws string at blk coords
+\ returns updated coords
+c: dstr ( y x end start -- y x') #[
+  [ 4 f! ]
+  0 #
+    [ over >=? ] 1 #jmp
+    \ y x end crnt
+    [ dup lb ] \ y x end crnt ascii
+    0 f> 1 f>  \ y x end crnt ascii y x
+    ` dch      \ y x end crnt
+    1 f> [ 1+ dwb 1- ` min ] 1 >f
+    \ y min(x+1,width-1) end crnt
+    [ 1+ ] 0 #loop
+  1 # [ drop2 ]
+]# ;
 
 \ reads random byte from sys device
 c: rand ( -- val ) [ 41 lb ] ;

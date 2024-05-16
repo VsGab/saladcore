@@ -73,7 +73,7 @@
 #define INC 3
 #define DEC 4
 #define SWAPP 5
-#define FNE 6 // frame not empty
+#define FSZ 6 // push frame size
 #define FSET 7
 #define FKEEP 8
 

@@ -131,9 +131,12 @@ hi puts
 |**'**  | `( -- xt )`         | Scans word name and returns code address
 |**`**  | `( -- )`            | Scans word name and inserts **lit**-lit-call (mind the nop)
 |dch    | `( ascii y x -- )`  | Draws a character at block coords
+|dnum   | `( y x num -- y x')`| Draws number at block coords
+|dstr   | `( y x end str -- y x')`| Draws string at block coords
 |dbla   | `( y x -- addr)`    | Returns memory address of pixel block
 |dclr   | `( -- )`            | Clear framebuffer with 0
 |pad    | `( -- addr)`        | Returns address of 1K user memory
+|**"**  | `( -- end addr)`    | Creates string at HERE
 |**.**  | `( val --)`         | Prints number
 |min    | `( a b -- min)`     | Returns min of to values
 |max    | `( a b -- max)`     | Returns max of to values

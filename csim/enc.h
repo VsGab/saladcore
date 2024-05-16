@@ -192,10 +192,10 @@ inline static byte swapp()
   return nullary_tos_op(SWAPP);
 }
 
-inline static byte fnempty()
+inline static byte fsz()
 {
-  NOARG_OP("fne");
-  return nullary_tos_op(FNE);
+  NOARG_OP("fsz");
+  return nullary_tos_op(FSZ);
 }
 
 inline static byte fset()

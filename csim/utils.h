@@ -27,7 +27,7 @@ static const char* nullary_name(byte op) {
     case NEG: return "NEG";
     case INC: return "INC";
     case DEC: return "DEC";
-    case FNE: return "FNE";
+    case FSZ: return "FSZ";
     case FSET: return "FSET";
     case FKEEP: return "FKEEP";
     case INT: return "INT";
