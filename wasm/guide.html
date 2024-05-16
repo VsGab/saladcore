@@ -31,19 +31,21 @@ samples:
             c: plx [ pad ] ;     \ player X
             c: ply pad 1+ lit2 ; \ player Y
             c: spd pad 2 + lit2 ; \ speed
-            c: plx> [ plx lb ] ; \ load plx
-            c: ply> [ ply lb ] ; \ load ply
-            c: >plx [ , 0 , ` max
+            c: plx@ [ plx lb ] ; \ load plx
+            c: ply@ [ ply lb ] ; \ load ply
+            c: plx! [ , 0 , ` max
                      31 , ` min  \ clip plx
                      plx snb drop ] ; \ update plx
-            c: upd [ ` dclr             \ clear display
-                    ply> plx> dbla      \ get block address
+            c: plupd #[ [ ` dclr           \ clear display
+                    ply@ plx@ dbla      \ get block address
                     102 stb drop        \ write a 2x2 square to it
                     ply dup lb spd lb + \ add spd to Y
-                    63 and stb          \ Y = Y MOD 63
-                    drop halt ] ;
-            1 , spd snb drop
-            ' upd 2 isr               \ set timer ISR
+                    63 &lt;? ] 0 #jmp
+                        [ drop 0 ]      \ Y = 0
+                    0 # [ stb drop ] ]# ;   \ update Y
+            c: upd [ ` plupd halt ] ;
+            1 spd snb drop
+            ' upd 2 isr                \ set timer ISR
         </ins>
     </li>
     <li data-sample-id="5" data-sample-deps="4">
@@ -53,14 +55,32 @@ samples:
     <li data-sample-id="6" data-sample-deps="4">
         <span>arrows move</span>
         <ins hidden>
-            c: lft [ ` plx> 1- ` >plx  ] ;
-            c: rgt [ ` plx> 1+ ` >plx  ] ;
+            c: lft [ ` plx@ 1- ` plx!  ] ;
+            c: rgt [ ` plx@ 1+ ` plx!  ] ;
             c: key #[ [ 40 lb 18 /=? ] 1 #jmp
                     ` lft  0 #jmp
                 1 # [ 9 /=? ] 0 #jmp
                     ` rgt
                 0 # [ drop halt ] ]# ;
             ' key , 1 isr
+        </ins>
+    </li>
+    <li data-sample-id="7" data-sample-deps="4">
+        <span>random target</span>
+        <ins hidden>
+            c: randx [ rand 16 div 8 + ] ;
+            c: tgt pad 3 + lit2 ;  \ rand target
+            tgt 16 stb drop        \ init target
+            16 plx!                \ init player
+            c: upd2 #[ [ ` plupd
+                63 , tgt lb    \ tgt-y tgt-x
+                dbla 102 stb drop \ draw tgt
+                ply@ /0? ] 0 #jmp
+                    [ tgt lb plx@ /=? drop ] 1 #jmp
+                        " HIT!" str [ ` puts cr ]
+                    1 # [ ` randx tgt snb drop ]
+                0 # [ halt ] ]# ;
+            ' upd2 2 isr   \ update timer ISR
         </ins>
     </li>
 

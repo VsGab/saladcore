@@ -345,7 +345,8 @@ enwht
 
 \ emit char to serial1
 c: putc [ 35 snb drop ] ;
-c: cr [ 10 , 35 snb drop ] ;
+c: cr [ 10 , putc ] ;
+c: sp [ 32 , putc ] ;
 
 \ outputs string using putc
 c: puts ( end start -- )
