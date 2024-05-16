@@ -57,11 +57,16 @@ button {
     margin-bottom: 0.5em;
     font-family: monospace;
     font-size: 2.5vmin;
+}
+
+button:hover:enabled {
+    background: #9faeae;
     cursor: pointer;
 }
 
-button:hover {
-    background: #9faeae;
+button:disabled {
+    border-color: #254a57;
+    color: #46565a;
 }
 
 .tinybtn {

@@ -5,17 +5,17 @@
 <hr>
 samples:
 <ul>
-    <li>
+    <li data-sample-id="1">
         <span>draw block</span>
         <ins hidden>32 16 dbla 124 stb drop</ins>
     </li>
-    <li>
+    <li data-sample-id="2">
         <span>draw ascii</span>
         <ins hidden>72 0 0 dch \ H
                     73 0 1 dch \ I
                     33 0 2 dch \ !</ins>
     </li>
-    <li>
+    <li data-sample-id="3">
         <span>arrow key code</span>
         <ins hidden>
             \ ISR must end with halt
@@ -23,7 +23,7 @@ samples:
             ' key 1 isr
         </ins>
     </li>
-    <li>
+    <li data-sample-id="4">
         <span>timer redraw</span>
         <ins hidden>
             c: plx [ pad ] ;     \ player X
@@ -44,19 +44,19 @@ samples:
             ' upd 2 isr               \ set timer ISR
         </ins>
     </li>
-    <li>
+    <li data-sample-id="5" data-sample-deps="4">
         <span>speed increase</span>
         <ins hidden>spd dup lb 1+ 10 min swap snb . </ins>
     </li>
-    <li>
+    <li data-sample-id="6" data-sample-deps="4">
         <span>arrows move</span>
         <ins hidden>
             c: lft [ ` plx> 1- ` >plx  ] ;
             c: rgt [ ` plx> 1+ ` >plx  ] ;
             c: key #[ [ 40 lb 18 /=? ] 1 #jmp
-                ` lft  0 #jmp
-                    1 # [ 9 /=? ] 0 #jmp
-                ` rgt
+                    ` lft  0 #jmp
+                1 # [ 9 /=? ] 0 #jmp
+                    ` rgt
                 0 # [ drop halt ] ]# ;
             ' key , 1 isr
         </ins>

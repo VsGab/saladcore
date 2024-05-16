@@ -13,6 +13,7 @@ var term_buff = []
 var core_stack = []
 var last_keypress = 0
 var keys_repeat_timers = {}
+var sample_deps_met = new Set()
 
 
 addEventListener("DOMContentLoaded", (_) => {
@@ -164,24 +165,52 @@ function open_tab(sample) {
     window.open(url, '_blank');
 }
 
+function update_guide_deps() {
+    var dep_samples = document.querySelectorAll('[data-sample-deps]')
+    for (const il of dep_samples) {
+        const deps = new Set(il.getAttribute("data-sample-deps").split(','))
+        const unmet = new Set([...deps].filter(x => !sample_deps_met.has(x)));
+        if (unmet.size == 0) {
+            const play = il.querySelector('.play');
+            play.removeAttribute('disabled')
+        }
+    }
+}
+
+function reset_guide_deps() {
+    sample_deps_met.clear()
+    var dep_samples = document.querySelectorAll('[data-sample-deps]')
+    for (const il of dep_samples) {
+        const play = il.querySelector('.play');
+        play.disabled = true
+    }
+}
+
+
 function patch_sample(el) {
+    const li = el.parentElement
+    const sample_id = li.getAttribute("data-sample-id")
+    const deps = li.getAttribute("data-sample-deps")
     const code = el.textContent.replace(/  +/g, ' ')
     const play = document.createElement('button')
     play.textContent = '\u25B6'
-    play.classList = 'tinybtn'
+    play.classList = 'tinybtn play'
     play.onclick = function() {
         this.blur()
         term_send(code)
+        sample_deps_met.add(sample_id)
+        update_guide_deps()
     }
+    if (deps) play.disabled = true
     const open = document.createElement('button')
     open.textContent = 'view'
-    open.classList = 'tinybtn'
+    open.classList = 'tinybtn view'
     open.onclick = function() {
         this.blur()
         open_tab(el.textContent)
     }
-    el.parentElement.appendChild(open)
-    el.parentElement.appendChild(play)
+    li.appendChild(open)
+    li.appendChild(play)
 }
 
 function fetch_guide() {
@@ -192,6 +221,7 @@ function fetch_guide() {
         box.innerHTML = html
         for (const el of document.getElementsByTagName('ins'))
             patch_sample(el)
+        update_guide_deps()
     }).catch(err => console.error(err));
 }
 
@@ -253,6 +283,7 @@ function reset_core(btn) {
         wasm_core.saladcore_js_init()
         if (loaded_source)
             term_send(loaded_source)
+        reset_guide_deps()
     })
 }
 

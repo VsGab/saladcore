@@ -61,12 +61,16 @@
                     keypad_press(ascii)
                     key_repeat_on(ascii)
                 }
+                e.preventDefault()
             }
         }
 
         document.onkeyup = function(e) {
             const ascii = handled_keys[event.key]
-            if (ascii) key_repeat_off(ascii)
+            if (ascii) {
+                key_repeat_off(ascii)
+                e.preventDefault()
+            }
         }
 
         document.onkeypress = function (e) {
