@@ -1,0 +1,97 @@
+body {
+    background-color: #112e38;
+    color: #9faeae;
+    font-family: monospace;
+    font-size: 1.5rem;
+}
+
+pre {
+    white-space: pre-wrap;
+}
+
+.row {
+    display: flex;
+    gap: 1rem;
+    flex-direction: row;
+}
+
+@media (max-aspect-ratio: 3/2) {
+    .row {
+      flex-direction: column;
+    }
+  }
+
+.col {
+    flex: 1;
+}
+
+.CodeMirror { height: 95vh; }
+
+button {
+    width: 100%;
+    height: 3rem;
+    border: 0.5vmin solid #46565a;
+    border-radius: 0.2rem;
+    background-color: #112e38;
+    color: #cad8d9;
+    margin-bottom: 0.5rem;
+    padding: 0.2rem;
+    font-size: 1.5rem;
+    font-family: monospace;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #9faeae;
+}
+
+#term-box {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    white-space: pre-wrap;
+    overflow-y: scroll;
+    background-color: #001111;
+    color: #9faeae;
+    scrollbar-color: #9faeae #61777c;
+    height: 25vh;
+}
+
+#tui {
+    background-color: #254a57;
+    height: 60vh;
+    overflow: hidden;
+    padding: 8px;
+}
+
+.tuitext {
+    font-family: monospace;
+    font-size: 2rem;
+    white-space: pre;
+}
+
+.d {
+    color: #9faeae;
+    background-color: #254a57;
+}
+.i {
+    background-color: #9faeae;
+    color: #254a57;
+}
+
+#kbd-input {
+    position: absolute;
+    inset: 0;                 /* cover the element */
+    width: 100%;
+    height: 100%;
+    opacity: 0.01;
+    border: none;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.tui-input-box {
+    position: relative;
+}
