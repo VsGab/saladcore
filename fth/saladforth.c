@@ -157,7 +157,7 @@ void fth_strhash(sf_ctx *ctx) {
         h1 = HASH_PERM[(h1 ^ ch) & 15];
         hash = ((hash << 1) + hash + ch + h1) & 0xff;
     }
-    DPUSH(hash & 63);
+    DPUSH(hash & HT_MASK);
 }
 
 void word_dict_insert(sf_ctx* ctx, int hash, int name_addr, int hdr_addr) {
@@ -191,30 +191,33 @@ void traverse_dict(sf_ctx *ctx, int str_addr, int hash) {
 }
 
 
-void fth_find_word_hdr(sf_ctx *ctx) {
+bool fth_find_word_hdr(sf_ctx *ctx) {
     DPUSH(TIB);
     fth_strhash(ctx);
     int hash = DTOS;
     DPOP();
     int str_addr = DTOS;
 
-    if (!HT_SLOT(hash)) {
-        dump_tib(ctx);
-        error("slot-empty");
-    }
+    if (!HT_SLOT(hash)) goto notfound;
 
     traverse_dict(ctx, str_addr, hash);
-    if (!DTOS) {
-        dump_tib(ctx);
-        error("word-not-found");
-    }
+    if (!DTOS) {DPOP(); goto notfound;}
     int hdr = DTOS; DPOP();
     DPOP(); // TIB
     DPUSH(hdr);
+    return true;
+
+notfound:
+    DPOP(); // TIB
+    return false;
 }
 
 void fth_find_word_code(sf_ctx *ctx) {
-    fth_find_word_hdr(ctx);
+    if (!fth_find_word_hdr(ctx)) {
+        print(" @");
+        dump_tib(ctx);
+        error("word-not-found");
+    }
     int hdr = DTOS; DPOP();
     int code = read_int24_little(ctx, hdr+5);
     DPUSH(code)
@@ -262,8 +265,8 @@ void write_int16_little(sf_ctx *ctx, int addr, int val) {
 }
 
 
-void fth_handle_word(sf_ctx *ctx) {
-    fth_find_word_hdr(ctx);
+bool fth_handle_word(sf_ctx *ctx) {
+    if (!fth_find_word_hdr(ctx)) return false;
     int hdr = DTOS; DPOP();
     int code = read_int24_little(ctx, hdr+5);
 
@@ -272,7 +275,7 @@ void fth_handle_word(sf_ctx *ctx) {
         int len = read_int16_little(ctx, code-2) >> 1;
         for (int i = 0; i<len; ++i)
             INS(MEM(code+i));
-        return;
+        return true;
     }
 
     if (code < MAX_BUILTINS) {
@@ -289,6 +292,7 @@ void fth_handle_word(sf_ctx *ctx) {
         };
 
     }
+    return true;
     //dump_ds(ctx);
 }
 
@@ -631,6 +635,14 @@ void fth_bind(sf_ctx* ctx) {
         len = MEM(TIB);
         if (len == 1 && MEM(TIB-1) == '|') break;
         assert(off+len+1 < 128);
+
+        if (fth_find_word_hdr(ctx)) {
+            print(" @");
+            DPOP();
+            dump_tib(ctx);
+            error("var-shadows-word");
+        }
+
         MEMSET(LOCALS+off, len);
         for (int i = 1 ; i <= len; ++i) MEMSET(LOCALS+off+i, MEM(TIB-i));
         off += len + 1;
@@ -800,6 +812,8 @@ void saladforth_init(sf_ctx* ctx) {
     init_builint_words(ctx);
 }
 
+
+
 void saladforth_eval_input(sf_ctx* ctx) {
     print(" EVAL ");
     while(!ctx->io_eof()){
@@ -808,7 +822,13 @@ void saladforth_eval_input(sf_ctx* ctx) {
         fth_parsenum(ctx);
         if (DTOS < 0) {
             DPOP();
-            if (!fth_var(ctx)) fth_handle_word(ctx);
+            if (!fth_handle_word(ctx)) {
+                if (!fth_var(ctx)) {
+                    print(" @");
+                    dump_tib(ctx);
+                    error("name-not-found");
+                }
+            }
         }
         MEMSET(TIB, 0);
     }

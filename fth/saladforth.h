@@ -15,6 +15,8 @@ typedef void (*fth_func)(sf_ctx*);
 #define LOCALS_ADJ ctx->wp.d[9]
 #define JUMPS ctx->wp.d[10]
 #define HT_SLOT(i) ctx->wp.d[64+i]
+#define HT_MASK 63
+
 
 // data layout
 #define TIB_SZ 64
